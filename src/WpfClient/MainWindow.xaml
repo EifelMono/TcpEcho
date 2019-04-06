@@ -1,0 +1,49 @@
+﻿<Window
+    x:Class="WpfClient.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:WpfClient"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="MainWindow"
+    Width="800"
+    Height="450"
+    mc:Ignorable="d">
+    <StackPanel>
+        <Label Margin="10" Content="{Binding ConnectStatus}" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandConnect}"
+            Content="Connect" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
+            CommandParameter="10|-1|newline"
+            Content="10 all newline" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
+            CommandParameter="10|-1|no newline"
+            Content="10 all no_newline" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
+            CommandParameter="1000|-1|newline"
+            Content="1000 all newline" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
+            CommandParameter="1000|100|newline"
+            Content="1000 100 newline" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
+            CommandParameter="100000|-1|newline"
+            Content="100__000 all newline" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
+            CommandParameter="100000|1000|newline"
+            Content="100__000 1000 newline" />
+    </StackPanel>
+</Window>

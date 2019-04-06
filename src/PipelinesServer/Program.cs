@@ -5,7 +5,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace TcpEcho
@@ -17,6 +19,8 @@ namespace TcpEcho
         static async Task Main(string[] args)
         {
             _echo = args.FirstOrDefault() == "echo";
+
+            Console.WriteLine(typeof(Program).Assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName ?? "framework not found");
 
             var listenSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             listenSocket.Bind(new IPEndPoint(IPAddress.Loopback, 8087));
@@ -47,7 +51,7 @@ namespace TcpEcho
 
         private static async Task FillPipeAsync(Socket socket, PipeWriter writer)
         {
-            const int minimumBufferSize = 512;
+            const int minimumBufferSize = 1024;
 
             while (true)
             {
@@ -57,6 +61,8 @@ namespace TcpEcho
                     Memory<byte> memory = writer.GetMemory(minimumBufferSize);
 
                     int bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None);
+                    Console.WriteLine($"received {bytesRead}");
+
                     if (bytesRead == 0)
                     {
                         break;
@@ -70,8 +76,10 @@ namespace TcpEcho
                     break;
                 }
 
+                Console.WriteLine($"before await writer.FlushAsync()");
                 // Make the data available to the PipeReader
                 FlushResult result = await writer.FlushAsync();
+                Console.WriteLine($"after await writer.FlushAsync()");
 
                 if (result.IsCompleted)
                 {
@@ -87,8 +95,9 @@ namespace TcpEcho
         {
             while (true)
             {
+                Console.WriteLine($"before await reader.ReadAsync()");
                 ReadResult result = await reader.ReadAsync();
-
+                Console.WriteLine($"after await reader.ReadAsync()");
                 ReadOnlySequence<byte> buffer = result.Buffer;
                 SequencePosition? position = null;
 
@@ -126,51 +135,49 @@ namespace TcpEcho
 
         private static void ProcessLine(Socket socket, in ReadOnlySequence<byte> buffer)
         {
-            if (_echo)
+            Console.Write($"[{socket.RemoteEndPoint}]: ");
+            var length = 0;
+            foreach (var segment in buffer)
             {
-                Console.Write($"[{socket.RemoteEndPoint}]: ");
-                foreach (var segment in buffer)
-                {
 #if NETCOREAPP2_1
-                Console.Write(Encoding.UTF8.GetString(segment.Span));
+                length += Encoding.UTF8.GetString(segment.Span).Length;
 #else
-                    Console.Write(Encoding.UTF8.GetString(segment));
+                length += Encoding.UTF8.GetString(segment).Length;
 #endif
-                }
-                Console.WriteLine();
             }
+            Console.WriteLine($"Length={length}");
         }
     }
 
 #if NET461
-    internal static class Extensions
-    {
-        public static Task<int> ReceiveAsync(this Socket socket, Memory<byte> memory, SocketFlags socketFlags)
+        internal static class Extensions
         {
-            var arraySegment = GetArray(memory);
-            return SocketTaskExtensions.ReceiveAsync(socket, arraySegment, socketFlags);
-        }
-
-        public static string GetString(this Encoding encoding, ReadOnlyMemory<byte> memory)
-        {
-            var arraySegment = GetArray(memory);
-            return encoding.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
-        }
-
-        private static ArraySegment<byte> GetArray(Memory<byte> memory)
-        {
-            return GetArray((ReadOnlyMemory<byte>)memory);
-        }
-
-        private static ArraySegment<byte> GetArray(ReadOnlyMemory<byte> memory)
-        {
-            if (!MemoryMarshal.TryGetArray(memory, out var result))
+            public static Task<int> ReceiveAsync(this Socket socket, Memory<byte> memory, SocketFlags socketFlags)
             {
-                throw new InvalidOperationException("Buffer backed by array was expected");
+                var arraySegment = GetArray(memory);
+                return SocketTaskExtensions.ReceiveAsync(socket, arraySegment, socketFlags);
             }
 
-            return result;
+            public static string GetString(this Encoding encoding, ReadOnlyMemory<byte> memory)
+            {
+                var arraySegment = GetArray(memory);
+                return encoding.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
+            }
+
+            private static ArraySegment<byte> GetArray(Memory<byte> memory)
+            {
+                return GetArray((ReadOnlyMemory<byte>)memory);
+            }
+
+            private static ArraySegment<byte> GetArray(ReadOnlyMemory<byte> memory)
+            {
+                if (!MemoryMarshal.TryGetArray(memory, out var result))
+                {
+                    throw new InvalidOperationException("Buffer backed by array was expected");
+                }
+
+                return result;
+            }
         }
-    }
 #endif
 }

@@ -38,6 +38,16 @@
         <Button
             Margin="10,0,10,10"
             Command="{Binding CommandSend}"
+            CommandParameter="10000|-1|newline"
+            Content="10__000 all newline" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
+            CommandParameter="10000|1000|newline"
+            Content="10__000 1000 newline" />
+        <Button
+            Margin="10,0,10,10"
+            Command="{Binding CommandSend}"
             CommandParameter="100000|-1|newline"
             Content="100__000 all newline" />
         <Button

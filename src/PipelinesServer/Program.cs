@@ -15,13 +15,14 @@ namespace TcpEcho
     class Program
     {
         private static bool _echo;
+        private static readonly int _minimumBufferSize = 1024 * 2048;
 
         static async Task Main(string[] args)
         {
             _echo = args.FirstOrDefault() == "echo";
 
             Console.WriteLine(typeof(Program).Assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName ?? "framework not found");
-
+            Console.WriteLine($"MinimumBufferSize={_minimumBufferSize}");
             var listenSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             listenSocket.Bind(new IPEndPoint(IPAddress.Loopback, 8087));
 
@@ -51,14 +52,14 @@ namespace TcpEcho
 
         private static async Task FillPipeAsync(Socket socket, PipeWriter writer)
         {
-            const int minimumBufferSize = 1024;
+
 
             while (true)
             {
                 try
                 {
                     // Request a minimum of 512 bytes from the PipeWriter
-                    Memory<byte> memory = writer.GetMemory(minimumBufferSize);
+                    Memory<byte> memory = writer.GetMemory(_minimumBufferSize);
 
                     int bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None);
                     Console.WriteLine($"received {bytesRead}");
@@ -76,10 +77,10 @@ namespace TcpEcho
                     break;
                 }
 
-                Console.WriteLine($"before await writer.FlushAsync()");
+                TraceLine($"before await writer.FlushAsync()");
                 // Make the data available to the PipeReader
                 FlushResult result = await writer.FlushAsync();
-                Console.WriteLine($"after await writer.FlushAsync()");
+                TraceLine($"after await writer.FlushAsync()");
 
                 if (result.IsCompleted)
                 {
@@ -95,9 +96,9 @@ namespace TcpEcho
         {
             while (true)
             {
-                Console.WriteLine($"before await reader.ReadAsync()");
+                TraceLine($"before await reader.ReadAsync()");
                 ReadResult result = await reader.ReadAsync();
-                Console.WriteLine($"after await reader.ReadAsync()");
+                TraceLine($"after await reader.ReadAsync()");
                 ReadOnlySequence<byte> buffer = result.Buffer;
                 SequencePosition? position = null;
 
@@ -147,37 +148,42 @@ namespace TcpEcho
             }
             Console.WriteLine($"Length={length}");
         }
+
+        static void TraceLine(string message)
+        {
+            // Console.WriteLine(message);
+        }
     }
 
 #if NET461
-        internal static class Extensions
+    internal static class Extensions
+    {
+        public static Task<int> ReceiveAsync(this Socket socket, Memory<byte> memory, SocketFlags socketFlags)
         {
-            public static Task<int> ReceiveAsync(this Socket socket, Memory<byte> memory, SocketFlags socketFlags)
-            {
-                var arraySegment = GetArray(memory);
-                return SocketTaskExtensions.ReceiveAsync(socket, arraySegment, socketFlags);
-            }
-
-            public static string GetString(this Encoding encoding, ReadOnlyMemory<byte> memory)
-            {
-                var arraySegment = GetArray(memory);
-                return encoding.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
-            }
-
-            private static ArraySegment<byte> GetArray(Memory<byte> memory)
-            {
-                return GetArray((ReadOnlyMemory<byte>)memory);
-            }
-
-            private static ArraySegment<byte> GetArray(ReadOnlyMemory<byte> memory)
-            {
-                if (!MemoryMarshal.TryGetArray(memory, out var result))
-                {
-                    throw new InvalidOperationException("Buffer backed by array was expected");
-                }
-
-                return result;
-            }
+            var arraySegment = GetArray(memory);
+            return SocketTaskExtensions.ReceiveAsync(socket, arraySegment, socketFlags);
         }
+
+        public static string GetString(this Encoding encoding, ReadOnlyMemory<byte> memory)
+        {
+            var arraySegment = GetArray(memory);
+            return encoding.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
+        }
+
+        private static ArraySegment<byte> GetArray(Memory<byte> memory)
+        {
+            return GetArray((ReadOnlyMemory<byte>)memory);
+        }
+
+        private static ArraySegment<byte> GetArray(ReadOnlyMemory<byte> memory)
+        {
+            if (!MemoryMarshal.TryGetArray(memory, out var result))
+            {
+                throw new InvalidOperationException("Buffer backed by array was expected");
+            }
+
+            return result;
+        }
+    }
 #endif
 }

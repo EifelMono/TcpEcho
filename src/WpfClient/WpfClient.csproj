@@ -6,4 +6,8 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="EifelMono.Fluent" Version="0.0.5" />
+  </ItemGroup>
+
 </Project>

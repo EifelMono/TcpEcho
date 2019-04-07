@@ -7,44 +7,43 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using EifelMono.Fluent;
+using EifelMono.Fluent.Bindings;
 
 namespace WpfClient
 {
-    public partial class MainWindow : Window, INotifyPropertyChanged
+    public partial class MainWindow : Window, INotifyPropertyChanged, IOnPropertyChanged
     {
         #region Bindings
+        Action<Action> action;
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
+
+            Title = $"WpfClient {fluent.App.TargetFrameworkName}";
+            action= (a) => Application.Current.Dispatcher.Invoke(a);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void OnPropertyChanged([CallerMemberName]string propertyName = "") =>
             (PropertyChanged)?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-        public void OnPropertyChanged<T>(ref T orgValue, T newValue, [CallerMemberName]string propertyName = "") where T : IComparable
-        {
-            if (orgValue.CompareTo(newValue) != 0)
-            {
-                orgValue = newValue;
-                (PropertyChanged)?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-        public void RefreshAll() => OnPropertyChanged(string.Empty);
         #endregion
 
         #region Connect
 
         Socket ClientSocket;
 
-        private string _ConnectStatus = "";
+        private string _ConnectStatus = null;
         public string ConnectStatus
-        { get => _ConnectStatus; set => OnPropertyChanged(ref _ConnectStatus, value); }
+        {
+            get => this.PropertyGet(ref _ConnectStatus);
+            set => this.PropertySet(ref _ConnectStatus, value);
+        }
 
         private ICommand _CommandConnect;
         public ICommand CommandConnect
-            => BindingCommand.Create(ref _CommandConnect, async () =>
+            => this.Command(ref _CommandConnect, async () =>
             {
                 ConnectStatus = "Connecting to port 8087";
                 try
@@ -86,7 +85,7 @@ namespace WpfClient
         }
         private ICommand _CommandSend;
         public ICommand CommandSend
-            => BindingCommand.Create(ref _CommandSend, async (parameter) =>
+            => this.Command(ref _CommandSend, async (parameter) =>
                 {
                     var args = (parameter as string ?? "").Split('|');
                     if (args.Length != 3) return;

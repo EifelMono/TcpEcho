@@ -19,4 +19,5 @@
       * this does not works
         * DeadLock
 
+![System.InvalideOperationException](https://github.com/EifelMono/TcpEcho/blob/master/images/14-05-_2019_15-39-59.png)
 

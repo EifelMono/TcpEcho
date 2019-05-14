@@ -17,7 +17,7 @@
   * "100_000 100 newline"
     * sends 100_000 chars plus newline in blocks with size of 1000 chars
       * this does not works
-        * DeadLock
+        * DeadLock ??? System.InvalideOperationException
 
 ![System.InvalideOperationException](https://github.com/EifelMono/TcpEcho/blob/master/images/14-05-_2019_15-39-59.png)
 
